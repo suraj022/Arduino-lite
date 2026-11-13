@@ -136,25 +136,14 @@ jobs:
           cargo build --release \
             --target x86_64-pc-windows-gnu
 
+      
       - name: Package Windows binary
         shell: msys2 {0}
         run: |
-          export PATH="/ucrt64/bin:/usr/bin:$PATH"
-
-          # Detect executable name
-          APP_BIN=$(cargo metadata --no-deps --format-version 1 |
-            jq -r '[.packages[].targets[] |
-            select(.kind | index("bin"))][0].name')
-
-          if [ -z "$APP_BIN" ] || [ "$APP_BIN" = "null" ]; then
-            echo "No binary target found"
-            exit 1
-          fi
-
           mkdir -p dist/arduino-lite
 
-          # Copy executable
-          cp "target/x86_64-pc-windows-gnu/release/$APP_BIN.exe" \
+          # Copy compiled executable
+          cp target/x86_64-pc-windows-gnu/release/arduino-lite.exe \
             dist/arduino-lite/
 
           # Copy Windows runtime DLLs
@@ -173,10 +162,11 @@ jobs:
           cp -r /ucrt64/share/icons \
             dist/arduino-lite/ 2>/dev/null || true
 
-          # Create ZIP
+          # Create ZIP archive
           cd dist
 
           zip -r arduino-lite-windows-x86_64.zip arduino-lite
+
 
       - name: Upload Windows build
         uses: actions/upload-artifact@v4
