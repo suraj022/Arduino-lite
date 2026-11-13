@@ -82,8 +82,8 @@ export ARDUINO_CLI="/full/path/to/arduino-cli"
 Clone the repository and enter its directory:
 
 ``` bash
-git clone <REPOSITORY_URL>
-cd <REPOSITORY_DIRECTORY>
+git clone https://github.com/suraj022/Arduino-lite
+cd arduino-lite
 ```
 
 Build the application in release mode:
@@ -101,11 +101,8 @@ cargo run --release
 The compiled executable is normally created at:
 
 ``` text
-target/release/<BINARY_NAME>
+target/release/arduino-lite
 ```
-
-Replace the placeholders above with the actual repository URL,
-directory, and Cargo binary name.
 
 ## First-time setup
 
