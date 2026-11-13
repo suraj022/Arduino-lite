@@ -37,7 +37,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Build
+      - name: Build Linux binary
         run: cargo build --release
 
       - name: Package Linux binary
@@ -46,6 +46,11 @@ jobs:
           APP_BIN=$(cargo metadata --no-deps --format-version 1 |
             jq -r '[.packages[].targets[] |
             select(.kind | index("bin"))][0].name')
+
+          if [ -z "$APP_BIN" ] || [ "$APP_BIN" = "null" ]; then
+            echo "No binary target found"
+            exit 1
+          fi
 
           mkdir -p dist
 
@@ -59,6 +64,7 @@ jobs:
         with:
           name: linux-build
           path: dist/*.tar.gz
+          if-no-files-found: error
 
 
   # ==========================================
@@ -93,58 +99,68 @@ jobs:
             zip
 
       - name: Build Windows binary
-        shell: pwsh
+        shell: msys2 {0}
         run: |
-          # MSYS2 UCRT64 compiler and libraries
-          $env:Path = "C:\msys64\ucrt64\bin;$env:Path"
+          # Locate Rust installation
+          CARGO_BIN="$(cygpath -u "$USERPROFILE")/.cargo/bin"
 
-          # Configure pkg-config for Windows GNU cross-compilation
-          $env:PKG_CONFIG = "C:\msys64\ucrt64\bin\pkg-config.exe"
+          export PATH="$CARGO_BIN:/ucrt64/bin:/usr/bin:$PATH"
 
-          $env:PKG_CONFIG_PATH = "C:\msys64\ucrt64\lib\pkgconfig;C:\msys64\ucrt64\share\pkgconfig"
+          # Configure pkg-config
+          export PKG_CONFIG="/ucrt64/bin/pkg-config.exe"
 
-          $env:PKG_CONFIG_ALLOW_CROSS = "1"
+          export PKG_CONFIG_PATH="/ucrt64/lib/pkgconfig:/ucrt64/share/pkgconfig"
 
-          $env:PKG_CONFIG_x86_64_pc_windows_gnu = "C:\msys64\ucrt64\bin\pkg-config.exe"
+          export PKG_CONFIG_ALLOW_CROSS=1
+          export PKG_CONFIG_ALLOW_CROSS_x86_64_pc_windows_gnu=1
 
-          $env:PKG_CONFIG_ALLOW_CROSS_x86_64_pc_windows_gnu = "1"
+          export PKG_CONFIG_x86_64_pc_windows_gnu="/ucrt64/bin/pkg-config.exe"
 
-          # Verify dependencies
+          export PKG_CONFIG_PATH_x86_64_pc_windows_gnu="/ucrt64/lib/pkgconfig:/ucrt64/share/pkgconfig"
+
+          # Verify tools
+          echo "=== Rust ==="
+          cargo --version
+          rustc --version
+
+          echo "=== Compiler ==="
+          gcc --version
+
+          echo "=== GTK dependencies ==="
+          pkg-config --modversion glib-2.0
           pkg-config --modversion gtk4
           pkg-config --modversion libadwaita-1
           pkg-config --modversion gtksourceview-5
 
-          # Identify executable
-          $metadata = cargo metadata --no-deps --format-version 1 |
-            ConvertFrom-Json
-
-          $target = $metadata.packages.targets |
-            Where-Object { $_.kind -contains "bin" } |
-            Select-Object -First 1
-
-          if (-not $target) {
-            throw "No binary target found"
-          }
-
-          "APP_BIN=$($target.name)" |
-            Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
-
-          # Compile Windows application
-          cargo build --release `
+          # Build
+          cargo build --release \
             --target x86_64-pc-windows-gnu
 
       - name: Package Windows binary
         shell: msys2 {0}
         run: |
+          export PATH="/ucrt64/bin:/usr/bin:$PATH"
+
+          # Detect executable name
+          APP_BIN=$(cargo metadata --no-deps --format-version 1 |
+            jq -r '[.packages[].targets[] |
+            select(.kind | index("bin"))][0].name')
+
+          if [ -z "$APP_BIN" ] || [ "$APP_BIN" = "null" ]; then
+            echo "No binary target found"
+            exit 1
+          fi
+
           mkdir -p dist/arduino-lite
 
+          # Copy executable
           cp "target/x86_64-pc-windows-gnu/release/$APP_BIN.exe" \
             dist/arduino-lite/
 
-          # Include Windows runtime DLLs
+          # Copy Windows runtime DLLs
           cp /ucrt64/bin/*.dll dist/arduino-lite/
 
-          # GTK runtime data
+          # Copy GTK runtime data
           cp -r /ucrt64/share/gtk-4.0 \
             dist/arduino-lite/ 2>/dev/null || true
 
@@ -157,6 +173,7 @@ jobs:
           cp -r /ucrt64/share/icons \
             dist/arduino-lite/ 2>/dev/null || true
 
+          # Create ZIP
           cd dist
 
           zip -r arduino-lite-windows-x86_64.zip arduino-lite
@@ -166,6 +183,7 @@ jobs:
         with:
           name: windows-build
           path: dist/*.zip
+          if-no-files-found: error
 
 
   # ==========================================
@@ -174,6 +192,7 @@ jobs:
 
   release:
     name: Create GitHub Release
+
     needs:
       - build-linux
       - build-windows
@@ -187,9 +206,11 @@ jobs:
           path: dist
           merge-multiple: true
 
-      - name: Create Release
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.ref_name }}
+          name: Arduino Lite ${{ github.ref_name }}
           generate_release_notes: true
           files: dist/*
 
