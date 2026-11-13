@@ -1,9 +1,3 @@
-//! Arduino Lite — a small GTK4 / libadwaita front-end for `arduino-cli`.
-//!
-//! The editor is GtkSourceView; compiling, uploading, board and port discovery
-//! and the serial monitor are all delegated to `arduino-cli` running in
-//! background threads so the UI never blocks.
-
 use std::cell::{Cell, RefCell};
 use std::collections::BTreeMap;
 use std::collections::hash_map::DefaultHasher;
