@@ -95,14 +95,26 @@ jobs:
       - name: Build Windows binary
         shell: pwsh
         run: |
-          # Add MSYS2 UCRT64 compiler and libraries to PATH
+          # MSYS2 UCRT64 compiler and libraries
           $env:Path = "C:\msys64\ucrt64\bin;$env:Path"
+
+          # Configure pkg-config for Windows GNU cross-compilation
+          $env:PKG_CONFIG = "C:\msys64\ucrt64\bin\pkg-config.exe"
 
           $env:PKG_CONFIG_PATH = "C:\msys64\ucrt64\lib\pkgconfig;C:\msys64\ucrt64\share\pkgconfig"
 
-          cargo --version
+          $env:PKG_CONFIG_ALLOW_CROSS = "1"
 
-          # Get executable name
+          $env:PKG_CONFIG_x86_64_pc_windows_gnu = "C:\msys64\ucrt64\bin\pkg-config.exe"
+
+          $env:PKG_CONFIG_ALLOW_CROSS_x86_64_pc_windows_gnu = "1"
+
+          # Verify dependencies
+          pkg-config --modversion gtk4
+          pkg-config --modversion libadwaita-1
+          pkg-config --modversion gtksourceview-5
+
+          # Identify executable
           $metadata = cargo metadata --no-deps --format-version 1 |
             ConvertFrom-Json
 
@@ -111,13 +123,13 @@ jobs:
             Select-Object -First 1
 
           if (-not $target) {
-            throw "No binary target found in Cargo project"
+            throw "No binary target found"
           }
 
           "APP_BIN=$($target.name)" |
             Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
-          # Compile
+          # Compile Windows application
           cargo build --release `
             --target x86_64-pc-windows-gnu
 
