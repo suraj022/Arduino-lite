@@ -27,14 +27,24 @@ background threads so the interface remains responsive.
 
 ## Requirements
 
-### Runtime requirements
+### Linux runtime requirements
 
 -   Linux desktop with GTK 4
 -   libadwaita
 -   GtkSourceView 5
--   [`arduino-cli`](https://arduino.github.io/arduino-cli/)
+-   `arduino-cli`
+-   `clangd` (for C/C++ language support and code completion)
+
+On Ubuntu, install the runtime dependencies before launching the
+application:
+
+``` bash
+sudo apt update && sudo apt install -y arduino-cli libgtk-4-1 libadwaita-1-0 libgtksourceview-5-0 clangd
+```
 
 ### Build requirements
+
+To build Arduino Lite from source, you also need:
 
 -   Rust toolchain (`rustc` and `cargo`)
 -   `pkg-config`
@@ -42,16 +52,10 @@ background threads so the interface remains responsive.
 -   libadwaita development files
 -   GtkSourceView 5 development files
 
-On Ubuntu, install the system dependencies with:
+On Ubuntu, install the additional build dependencies with:
 
 ``` bash
-sudo apt update
-sudo apt install \
-    build-essential \
-    pkg-config \
-    libgtk-4-dev \
-    libadwaita-1-dev \
-    libgtksourceview-5-dev
+sudo apt install -y build-essential pkg-config libgtk-4-dev libadwaita-1-dev libgtksourceview-5-dev
 ```
 
 Install Rust using [rustup](https://rustup.rs/) if it is not already
@@ -62,16 +66,15 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 . "$HOME/.cargo/env"
 ```
 
-Install `arduino-cli` using the [official installation
-instructions](https://arduino.github.io/arduino-cli/installation/).
-Confirm that it is available:
+Confirm that Arduino CLI and clangd are available:
 
 ``` bash
 arduino-cli version
+clangd --version
 ```
 
-If the executable is not named `arduino-cli` or is not in your `PATH`,
-set `ARDUINO_CLI` to its full path before launching the application:
+If the Arduino CLI executable is not in your `PATH`, set `ARDUINO_CLI`
+to its full path before launching the application:
 
 ``` bash
 export ARDUINO_CLI="/full/path/to/arduino-cli"
@@ -103,6 +106,9 @@ The compiled executable is normally created at:
 ``` text
 target/release/arduino-lite
 ```
+
+Replace the placeholders above with the actual repository URL,
+directory, and Cargo binary name.
 
 ## First-time setup
 
@@ -166,6 +172,11 @@ USB adapter.
 Install Arduino CLI and make sure `arduino-cli version` works in a
 terminal. If it is installed in a non-standard location, set
 `ARDUINO_CLI` to its full executable path.
+
+### `clangd` not found
+
+Install `clangd` using your distribution's package manager and confirm
+that `clangd --version` works in a terminal.
 
 ### No boards appear in the board selector
 
